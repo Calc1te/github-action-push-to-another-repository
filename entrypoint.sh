@@ -153,15 +153,40 @@ ORIGIN_DIR="${GITHUB_WORKSPACE:-/github/workspace}"
 echo "[+] Origin directory ($ORIGIN_DIR) ls:"
 ls -al "$ORIGIN_DIR" || echo "Cannot ls $ORIGIN_DIR"
 
-echo "[+] git status in $ORIGIN_DIR:"
-git -C "$ORIGIN_DIR" status || echo "Cannot run git status"
+if git -C "$ORIGIN_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+	echo "[+] Git repo found, trying to get commit info via git"
+	UPSTREAM_TITLE=$(git -C "$ORIGIN_DIR" log -1 --format="%s" "$GITHUB_SHA" 2>/dev/null || git -C "$ORIGIN_DIR" log -1 --format="%s" 2>/dev/null || echo "")
+	UPSTREAM_BODY=$(git -C "$ORIGIN_DIR" log -1 --format="%b" "$GITHUB_SHA" 2>/dev/null || git -C "$ORIGIN_DIR" log -1 --format="%b" 2>/dev/null || echo "")
+else
+	echo "[+] No git repository found in $ORIGIN_DIR (possibly actions/checkout used without .git). Fetching from GitHub API."
+	UPSTREAM_TITLE=""
+	UPSTREAM_BODY=""
+fi
 
-echo "[+] Getting upstream commit log for SHA: $GITHUB_SHA"
-git -C "$ORIGIN_DIR" log -1 --format="%s" "$GITHUB_SHA" || echo "Failed to get log for $GITHUB_SHA"
-git -C "$ORIGIN_DIR" log -1 --format="%b" "$GITHUB_SHA" || echo "Failed to get body for $GITHUB_SHA"
+if [ -z "$UPSTREAM_TITLE" ] && [ -n "${GITHUB_REPOSITORY:-}" ] && [ -n "${GITHUB_SHA:-}" ]; then
+	echo "[+] Fetching commit data from GitHub API for $GITHUB_REPOSITORY@$GITHUB_SHA"
+	API_URL="https://api.$GITHUB_SERVER/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA"
+	
+	# Try to fetch using API_TOKEN_GITHUB if available, otherwise anonymously
+	if [ -n "${API_TOKEN_GITHUB:-}" ]; then
+		API_RESPONSE=$(curl -s -H "Authorization: token $API_TOKEN_GITHUB" "$API_URL" || echo "")
+	else
+		API_RESPONSE=$(curl -s "$API_URL" || echo "")
+	fi
+	
+	if [ -n "$API_RESPONSE" ]; then
+		API_MESSAGE=$(echo "$API_RESPONSE" | jq -r '.commit.message' 2>/dev/null || echo "")
+		if [ "$API_MESSAGE" != "null" ] && [ -n "$API_MESSAGE" ]; then
+			# First line is title, rest is body
+			UPSTREAM_TITLE=$(echo "$API_MESSAGE" | head -n 1)
+			UPSTREAM_BODY=$(echo "$API_MESSAGE" | tail -n +3) # +3 skips title and empty line
+		fi
+	fi
+fi
 
-UPSTREAM_TITLE=$(git -C "$ORIGIN_DIR" log -1 --format="%s" "$GITHUB_SHA" 2>/dev/null || git -C "$ORIGIN_DIR" log -1 --format="%s" 2>/dev/null || echo "Update from $GITHUB_REPOSITORY")
-UPSTREAM_BODY=$(git -C "$ORIGIN_DIR" log -1 --format="%b" "$GITHUB_SHA" 2>/dev/null || git -C "$ORIGIN_DIR" log -1 --format="%b" 2>/dev/null || echo "")
+if [ -z "$UPSTREAM_TITLE" ]; then
+	UPSTREAM_TITLE="Update from $GITHUB_REPOSITORY"
+fi
 
 if [ "$COMMIT_MESSAGE" = "Update from ORIGIN_COMMIT" ] || [ -z "$COMMIT_MESSAGE" ]; then
 	ORIGIN_COMMIT_URL="https://$GITHUB_SERVER/$GITHUB_REPOSITORY/commit/$GITHUB_SHA"
