@@ -132,7 +132,9 @@ for SRC_DIR in $SOURCE_DIRECTORY; do
 	if [ -n "$INCLUDE_PATTERNS_FILE" ] && [ -f "$INCLUDE_PATTERNS_FILE" ]; then
 		echo "[+] Using include patterns file: $INCLUDE_PATTERNS_FILE"
 		# Use rsync to only include files matching the patterns in the file
-		rsync -a --include-from="$INCLUDE_PATTERNS_FILE" --exclude="*" "$SRC_DIR/" "$ABSOLUTE_TARGET_DIRECTORY/"
+		# We include "*/" first so rsync will traverse into directories, 
+		# then your include patterns, then exclude everything else.
+		rsync -a --prune-empty-dirs --include="*/" --include-from="$INCLUDE_PATTERNS_FILE" --exclude="*" "$SRC_DIR/" "$ABSOLUTE_TARGET_DIRECTORY/"
 	else
 		cp -ra "$SRC_DIR"/. "$ABSOLUTE_TARGET_DIRECTORY"
 	fi
