@@ -149,6 +149,17 @@ ls -la
 git config --global --add safe.directory "*" || true
 
 ORIGIN_DIR="${GITHUB_WORKSPACE:-/github/workspace}"
+
+echo "[+] Origin directory ($ORIGIN_DIR) ls:"
+ls -al "$ORIGIN_DIR" || echo "Cannot ls $ORIGIN_DIR"
+
+echo "[+] git status in $ORIGIN_DIR:"
+git -C "$ORIGIN_DIR" status || echo "Cannot run git status"
+
+echo "[+] Getting upstream commit log for SHA: $GITHUB_SHA"
+git -C "$ORIGIN_DIR" log -1 --format="%s" "$GITHUB_SHA" || echo "Failed to get log for $GITHUB_SHA"
+git -C "$ORIGIN_DIR" log -1 --format="%b" "$GITHUB_SHA" || echo "Failed to get body for $GITHUB_SHA"
+
 UPSTREAM_TITLE=$(git -C "$ORIGIN_DIR" log -1 --format="%s" "$GITHUB_SHA" 2>/dev/null || git -C "$ORIGIN_DIR" log -1 --format="%s" 2>/dev/null || echo "Update from $GITHUB_REPOSITORY")
 UPSTREAM_BODY=$(git -C "$ORIGIN_DIR" log -1 --format="%b" "$GITHUB_SHA" 2>/dev/null || git -C "$ORIGIN_DIR" log -1 --format="%b" 2>/dev/null || echo "")
 
