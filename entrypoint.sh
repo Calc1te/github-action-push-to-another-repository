@@ -145,9 +145,24 @@ cd "$CLONE_DIR"
 echo "[+] Files that will be pushed"
 ls -la
 
-ORIGIN_COMMIT="https://$GITHUB_SERVER/$GITHUB_REPOSITORY/commit/$GITHUB_SHA"
-COMMIT_MESSAGE="${COMMIT_MESSAGE/ORIGIN_COMMIT/$ORIGIN_COMMIT}"
-COMMIT_MESSAGE="${COMMIT_MESSAGE/\$GITHUB_REF/$GITHUB_REF}"
+# Allow git to safely run in the original workspace to fetch the upstream commit message
+git config --global --add safe.directory "$GITHUB_WORKSPACE" || true
+
+UPSTREAM_TITLE=$(git -C "$GITHUB_WORKSPACE" log -1 --format="%s" 2>/dev/null || echo "Update from $GITHUB_REPOSITORY")
+UPSTREAM_BODY=$(git -C "$GITHUB_WORKSPACE" log -1 --format="%b" 2>/dev/null || echo "")
+
+if [ "$COMMIT_MESSAGE" = "Update from ORIGIN_COMMIT" ] || [ -z "$COMMIT_MESSAGE" ]; then
+	ORIGIN_COMMIT_URL="https://$GITHUB_SERVER/$GITHUB_REPOSITORY/commit/$GITHUB_SHA"
+	COMMIT_MESSAGE="[sync] $UPSTREAM_TITLE
+
+$UPSTREAM_BODY
+
+Upstream-commit: $ORIGIN_COMMIT_URL"
+else
+	ORIGIN_COMMIT="https://$GITHUB_SERVER/$GITHUB_REPOSITORY/commit/$GITHUB_SHA"
+	COMMIT_MESSAGE="${COMMIT_MESSAGE/ORIGIN_COMMIT/$ORIGIN_COMMIT}"
+	COMMIT_MESSAGE="${COMMIT_MESSAGE/\$GITHUB_REF/$GITHUB_REF}"
+fi
 
 echo "[+] Set directory is safe ($CLONE_DIR)"
 # Related to https://github.com/cpina/github-action-push-to-another-repository/issues/64
