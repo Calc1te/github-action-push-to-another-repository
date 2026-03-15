@@ -145,11 +145,12 @@ cd "$CLONE_DIR"
 echo "[+] Files that will be pushed"
 ls -la
 
-# Allow git to safely run in the original workspace to fetch the upstream commit message
-git config --global --add safe.directory "$GITHUB_WORKSPACE" || true
+# Allow git to safely run in any directory to bypass ownership issues in Docker
+git config --global --add safe.directory "*" || true
 
-UPSTREAM_TITLE=$(git -C "$GITHUB_WORKSPACE" log -1 --format="%s" 2>/dev/null || echo "Update from $GITHUB_REPOSITORY")
-UPSTREAM_BODY=$(git -C "$GITHUB_WORKSPACE" log -1 --format="%b" 2>/dev/null || echo "")
+ORIGIN_DIR="${GITHUB_WORKSPACE:-/github/workspace}"
+UPSTREAM_TITLE=$(git -C "$ORIGIN_DIR" log -1 --format="%s" "$GITHUB_SHA" 2>/dev/null || git -C "$ORIGIN_DIR" log -1 --format="%s" 2>/dev/null || echo "Update from $GITHUB_REPOSITORY")
+UPSTREAM_BODY=$(git -C "$ORIGIN_DIR" log -1 --format="%b" "$GITHUB_SHA" 2>/dev/null || git -C "$ORIGIN_DIR" log -1 --format="%b" 2>/dev/null || echo "")
 
 if [ "$COMMIT_MESSAGE" = "Update from ORIGIN_COMMIT" ] || [ -z "$COMMIT_MESSAGE" ]; then
 	ORIGIN_COMMIT_URL="https://$GITHUB_SERVER/$GITHUB_REPOSITORY/commit/$GITHUB_SHA"
