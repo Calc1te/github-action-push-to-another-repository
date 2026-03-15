@@ -1,19 +1,73 @@
-# github-action-push-to-another-repository
+# GitHub Action: Sync Repositories
 
-> [!WARNING]
-> TL;DR: this repository is not maintained for any new development. I plan to
-> fix issues if they arise due to changes on GitHub, to minimise disruption of
-> existing usage.
->
-> My circumstances changed since I started the GitHub Action in 2020. I am not
-> able to add functionality to it or fix issues.
->
-> The action is 175 lines of shell script. Feel free to fork it and modify it
-> for your own use case.
->
-> If you create a fork that might replace this one, I will add a note in the
-> documentation and the README.md. Please, open an issue and I will do it.
+A GitHub Action to seamlessly push and sync files from one repository to another.
 
-See the extensive documentation in https://cpina.github.io/push-to-another-repository-docs/ (includes examples, FAQ, troubleshooting, etc.).
+This action is a fork of [cpina/github-action-push-to-another-repository](https://github.com/cpina/github-action-push-to-another-repository), enhanced with two new features:
 
-GitHub repository of the documentation: https://github.com/cpina/push-to-another-repository-docs
+1. **Multiple Directory Mapping**
+2. **File Filtering (Glob Matching)**
+
+> **Note:** For all base functionalities (including general examples, FAQ, and troubleshooting), please refer to the [original extensive documentation](https://cpina.github.io/push-to-another-repository-docs/).
+
+---
+
+## New Features
+
+### 1. Multiple Directory Support
+
+For scenarios where need to sync more than one folder, you can now specify multiple source and target directories simultaneously.
+
+**How to use:** Separate the directory paths with a space.
+
+```yaml
+    - name: Push to another repo
+      uses: Calc1te/github-action-sync-repositories@main
+      env:
+        SSH_DEPLOY_KEY: ${{ secrets.SSH_DEPLOY_KEY }}
+        API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+      with:
+        # Separate multiple directories with a space
+        source-directory: 'Application src docs' 
+        # If omitted, target-directory will default to the exact same paths as source-directory
+        target-directory: 'Application src docs'
+```
+
+### 2. Glob Matching (File Filtering)
+
+You can selectively control exactly which files or directories to sync by providing an include-patterns-file.
+
+Default Behavior: When this file is used, all files are excluded by default. Only the patterns you explicitly define will be synced.
+
+File Location: The pattern file must be present in your repository's workspace (e.g., in the root folder). Do not put it inside the .github/workflows/ directory.
+
+Example Workflow:
+
+```yaml
+- name: Sync to another repository
+      uses: Calc1te/github-action-sync-repositories@main
+      env:
+        SSH_DEPLOY_KEY: ${{ secrets.SSH_DEPLOY_KEY }}
+      with:
+        destination-github-username: 'target-user'
+        destination-repository-name: 'target-repo'
+        # Point to your include patterns file here
+        include-patterns-file: 'sync_patterns'
+```
+
+#### Syntax for sync_patterns
+
+The configuration file uses rsync filter syntax. Here are the most common and useful examples to get you started:
+
+```bash
+# Match a specific file
++ config.json
+
+# Match all .c files in the root directory
++ *.c
+
+# Match ONLY the direct children of a directory (1 level deep)
++ path/to/somewhere/*
+
+# Match ALL files and folders recursively inside a specific directory
++ path/to/somewhere/***
+```
