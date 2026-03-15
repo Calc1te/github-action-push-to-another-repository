@@ -16,6 +16,7 @@ TARGET_BRANCH="${9}"
 COMMIT_MESSAGE="${10}"
 TARGET_DIRECTORY="${11}"
 CREATE_TARGET_BRANCH_IF_NEEDED="${12}"
+INCLUDE_PATTERNS_FILE="${13:-}"
 
 if [ -z "$DESTINATION_REPOSITORY_USERNAME" ]
 then
@@ -127,7 +128,14 @@ for SRC_DIR in $SOURCE_DIRECTORY; do
 	mkdir -p "$ABSOLUTE_TARGET_DIRECTORY"
 	
 	echo "[+] Copying contents of source repository folder $SRC_DIR to folder $TGT_DIR in git repo $DESTINATION_REPOSITORY_NAME"
-	cp -ra "$SRC_DIR"/. "$ABSOLUTE_TARGET_DIRECTORY"
+	
+	if [ -n "$INCLUDE_PATTERNS_FILE" ] && [ -f "$INCLUDE_PATTERNS_FILE" ]; then
+		echo "[+] Using include patterns file: $INCLUDE_PATTERNS_FILE"
+		# Use rsync to only include files matching the patterns in the file
+		rsync -a --include-from="$INCLUDE_PATTERNS_FILE" --exclude="*" "$SRC_DIR/" "$ABSOLUTE_TARGET_DIRECTORY/"
+	else
+		cp -ra "$SRC_DIR"/. "$ABSOLUTE_TARGET_DIRECTORY"
+	fi
 done
 
 cd "$CLONE_DIR"

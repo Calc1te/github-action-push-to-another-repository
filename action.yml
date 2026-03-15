@@ -48,6 +48,10 @@ inputs:
     description: '[Optional] The directory to wipe and replace in the target repository'
     default: ''
     required: false
+  include-patterns-file:
+    description: '[Optional] File containing glob patterns of files to include in the sync (like a reverse gitignore)'
+    default: ''
+    required: false
   create-target-branch-if-needed:
     type: boolean
     description: >-
@@ -71,6 +75,7 @@ runs:
     - '${{ inputs.commit-message }}'
     - '${{ inputs.target-directory }}'
     - '${{ inputs.create-target-branch-if-needed }}'
+    - '${{ inputs.include-patterns-file }}'
 branding:
   icon: git-commit
   color: green
