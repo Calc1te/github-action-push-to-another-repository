@@ -100,25 +100,30 @@ ls -al
 echo "[+] Listing root Location"
 ls -al /
 
-echo "[+] List contents of $SOURCE_DIRECTORY"
-ls "$SOURCE_DIRECTORY"
+TGT_STR="$TARGET_DIRECTORY "
 
-echo "[+] Checking if local $SOURCE_DIRECTORY exist"
-if [ ! -d "$SOURCE_DIRECTORY" ]
-then
-	echo "ERROR: $SOURCE_DIRECTORY does not exist"
-	echo "This directory needs to exist when push-to-another-repository is executed"
-	exit 1
-fi
+for SRC_DIR in $SOURCE_DIRECTORY; do
+	TGT_DIR="${TGT_STR%% *}"
+	TGT_STR="${TGT_STR#* }"
 
-for TGT_DIR in $TARGET_DIRECTORY; do
+	echo "[+] List contents of $SRC_DIR"
+	ls -a "$SRC_DIR" || true
+
+	echo "[+] Checking if local $SRC_DIR exist"
+	if [ ! -d "$SRC_DIR" ]
+	then
+		echo "ERROR: $SRC_DIR does not exist"
+		echo "This directory needs to exist when push-to-another-repository is executed"
+		exit 1
+	fi
+
 	ABSOLUTE_TARGET_DIRECTORY="$CLONE_DIR/$TGT_DIR/"
 	
 	echo "[+] Creating $ABSOLUTE_TARGET_DIRECTORY if it doesn't exist"
 	mkdir -p "$ABSOLUTE_TARGET_DIRECTORY"
 	
-	echo "[+] Copying contents of source repository folder $SOURCE_DIRECTORY to folder $TGT_DIR in git repo $DESTINATION_REPOSITORY_NAME"
-	cp -ra "$SOURCE_DIRECTORY"/. "$ABSOLUTE_TARGET_DIRECTORY"
+	echo "[+] Copying contents of source repository folder $SRC_DIR to folder $TGT_DIR in git repo $DESTINATION_REPOSITORY_NAME"
+	cp -ra "$SRC_DIR"/. "$ABSOLUTE_TARGET_DIRECTORY"
 done
 
 cd "$CLONE_DIR"
